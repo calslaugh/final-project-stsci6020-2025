@@ -1,8 +1,20 @@
 ---
 Title: Final Project Analysis
-Author: Your name
-Output format: HTML
+Author: Calvin Slaughter
+Date: 5/14/2025
 ---
+
+## Table of Contents:
+3.1 Preprocessing and Cleaning
+3.2 Exploratory Data Analysis
+3.3 Linear Regression
+3.4 Regression Assumption Verification
+3.5 Assumption Violation Handling
+3.6 Hypothesis Testing on Coefficients
+3.7 Confidence Interval Generation for Significant Coefficients
+3.8 Variable Selection for Predictive Modeling
+3.9 Assessing Model Performance
+
 ## loading in the data and required packages for the subsiquent analysis
 ```{R}
 #load in the packages
@@ -183,4 +195,13 @@ mse_forward <- mean((test_data$exam_score - predict(out_forward_aic, newdata = t
 print(paste("lasso mse =", mse_lasso))
 print(paste("forward mse =", mse_forward))
 ```
+Bibliography:
+Bobbitt, Z. (2020, November 13). Lasso Regression in R (Step-by-Step). Statology. https://www.statology.org/lasso-regression-in-r/
 
+Comprehensive R Archive Network (CRAN). (2022, March 21). Testing Linear Regression Models [R package lmtest version 0.9-40]. https://cran.r-project.org/web/packages/lmtest/index.html
+
+Comprehensive R Archive Network (CRAN). (2023, August 22). Lasso and Elastic-Net Regularized Generalized Linear Models [R package glmnet version 4.1-8]. https://cran.r-project.org/web/packages/glmnet/index.html
+
+Comprehensive R Archive Network (CRAN). (2024, September 27). Companion to Applied Regression [R package car version 3.1-3]. https://cran.r-project.org/web/packages/car/index.html
+
+Find Open Datasets and Machine Learning Projects | Kaggle. (n.d.). https://www.kaggle.com/datasets/jayaantanaath/student-habits-vs-academic-performance
