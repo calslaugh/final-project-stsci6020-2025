@@ -1,0 +1,186 @@
+---
+Title: Final Project Analysis
+Author: Your name
+Output format: HTML
+---
+## loading in the data and required packages for the subsiquent analysis
+```{R}
+#load in the packages
+library(lmtest)
+library(car)
+
+#load in the data
+data <- read.csv("C:\\Users\\calsl\\Downloads\\student_habits_performance.csv")
+```
+
+## 3.1 Preprocessing and Cleaning
+```{R}
+#changing columns to factors (when applicable)
+data$student_id <- factor(data$student_id)
+data$gender <- factor(data$gender)
+data$part_time_job <- factor(data$part_time_job)
+data$diet_quality <- factor(data$diet_quality)
+data$parental_education_level <- factor(data$parental_education_level)
+data$internet_quality <- factor(data$internet_quality)
+data$extracurricular_participation <- factor(data$extracurricular_participation)
+
+#remove all the outliers
+remove_outliers <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  iqr_value <- Q3 - Q1
+  x[x < (Q1 - 1.5 * iqr_value) | x > (Q3 + 1.5 * iqr_value)] <- NA
+  return(x)
+}
+
+data$exam_score <- remove_outliers(data$exam_score)
+data$age <- remove_outliers(data$age)
+data$study_hours_per_day <- remove_outliers(data$study_hours_per_day)
+data$social_media_hours <- remove_outliers(data$social_media_hours)
+data$netflix_hours <- remove_outliers(data$netflix_hours)
+data$attendance_percentage <- remove_outliers(data$attendance_percentage)
+data$sleep_hours <- remove_outliers(data$sleep_hours)
+data$exercise_frequency <- remove_outliers(data$exercise_frequency)
+data$mental_health_rating <- remove_outliers(data$mental_health_rating)
+
+#remove rows with unfilled cells
+data_clean <- na.omit(data)
+
+#present the cleaned data
+head(data_clean)
+```
+
+## 3.2 Exploratory Data Analysis
+```{R}
+#generate summary statistics and data visualization for cleaned data
+
+summary(data_clean)
+
+boxplot(data_clean$exam_score, main = "Exam Score", ylab = "Value")
+boxplot(data_clean$age, main = "Age", ylab = "Value")
+boxplot(data_clean$study_hours_per_day, main = "Study Hours per Day", ylab = "Value")
+boxplot(data_clean$social_media_hours, main = "Social Media Hours", ylab = "Value")
+boxplot(data_clean$netflix_hours, main = "Netflix Hours", ylab = "Value")
+boxplot(data_clean$attendance_percentage, main = "Attendance Percentage", ylab = "Value")
+boxplot(data_clean$sleep_hours, main = "Sleep Hours", ylab = "Value")
+boxplot(data_clean$exercise_frequency, main = "Exercise Frequency", ylab = "Value")
+boxplot(data_clean$mental_health_rating, main = "Mental Health Rating", ylab = "Value")
+
+plot(data_clean$exam_score ~ data_clean$study_hours_per_day)
+plot(data_clean$exam_score ~ data_clean$social_media_hours)
+plot(data_clean$exam_score ~ data_clean$netflix_hours)
+plot(data_clean$exam_score ~ data_clean$attendance_percentage)
+plot(data_clean$exam_score ~ data_clean$sleep_hours)
+plot(data_clean$exam_score ~ data_clean$exercise_frequency)
+plot(data_clean$exam_score ~ data_clean$mental_health_rating)
+plot(data_clean$exam_score ~ data_clean$age)
+```
+
+## 3.3 Linear Regression
+```{R}
+#splitting the data into training and testing subsets
+set.seed(123)
+train_rows <- sample(1:nrow(data_clean), size = 0.8 * nrow(data_clean))
+train_data <- data_clean[train_rows, ]
+test_data <- data_clean[-train_rows, ]
+
+#fitting the linear regression
+all_vars_mod <- lm(exam_score ~ age + gender + study_hours_per_day + social_media_hours +
+                   netflix_hours + part_time_job + attendance_percentage + sleep_hours +
+                   diet_quality + exercise_frequency + parental_education_level +
+                   internet_quality + mental_health_rating + extracurricular_participation,
+                   data = train_data)
+
+summary(all_vars_mod)
+```
+
+## 3.4 Regression Assumption Verification
+```{R}
+#3.4.1 Linearity assessment:
+plot(all_vars_mod$fitted.values, train_data$exam_score,
+     pch = 19, cex = .1 , xlab = "fitted values", ylab = "observed values")
+abline(a = 0, b = 1, col = "red")
+
+#3.4.2 Normality of residuals: 
+hist(all_vars_mod$residuals)
+
+#3.4.3 Homoscedasticity: 
+bptest(all_vars_mod)
+
+#3.4.4 Independence of observations: 
+dwtest(all_vars_mod)
+
+#3.4.5 Multicollinearity assessment:
+vif(all_vars_mod)
+```
+
+#3.5 Assumption Violation Handling
+No assumptions were violated, and thus no violation handling was conducted
+
+#3.6 Hypothesis Testing on Coefficients
+```{R}
+# make a coefficients matrix
+coef_matrix <- summary(all_vars_mod)$coefficients
+
+# make a dataframe with the vars and coefficients
+pval_table <- data.frame(Variable = rownames(coef_matrix),P_Value = coef_matrix[, "Pr(>|t|)"],row.names = NULL)
+
+# Print the table
+print(pval_table)
+```
+
+## 3.7 Confidence Interval Generation for Significant Coefficients
+```{R}
+confint(all_vars_mod, parm = c("study_hours_per_day", "social_media_hours", "netflix_hours", "attendance_percentage", "sleep_hours", "exercise_frequency", "mental_health_rating"))
+```
+
+## 3.8 Variable Selection for Predictive Modeling
+```{R}
+#3.8.1 Stepwise Forward Selection Using AIC: 
+
+# Fit the initial model (intercept-only model)
+intOnly <- lm(exam_score ~ 1, data = train_data)
+
+# Run forward stepwise selection
+out_forward_aic <- step(object = intOnly, direction = "forward", 
+                        scope = formula(all_vars_mod), trace = TRUE, k = 2)
+
+summary(out_forward_aic)
+
+```
+
+```{R}
+#3.8.2 Lasso Selection:
+
+# Exclude the first and last columns from train_data
+train_data_no_IDs <- train_data[, -c(1, ncol(train_data))]
+
+# Create model matrix excluding intercept
+x <- model.matrix(~ . - 1, data = train_data_no_IDs)
+
+# Fit the lasso model
+lasso_mod <- glmnet::cv.glmnet(
+  x = x,
+  y = train_data$exam_score,
+  alpha = 1,
+  family = "gaussian"
+)
+
+# Show coefficients at lambda.1se
+coef(lasso_mod, s = lasso_mod$lambda.1se)
+```
+ 
+## 3.9 Assessing Model Performance
+```{R}
+# Mean squared error for predictions using lasso
+test_data_no_IDs <- test_data[, -c(1, ncol(test_data))]
+x_test <- model.matrix(~ . - 1, data = test_data_no_IDs)
+mse_lasso <- mean((test_data$exam_score - predict(lasso_mod, newx = x_test, s = "lambda.min"))^2)
+
+# Mean squared error for predictions using the stepwise forward selection model
+mse_forward <- mean((test_data$exam_score - predict(out_forward_aic, newdata = test_data))^2)
+
+print(paste("lasso mse =", mse_lasso))
+print(paste("forward mse =", mse_forward))
+```
+
